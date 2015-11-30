@@ -7,12 +7,12 @@
     // load document ready than check chatbot is ready or not
     $.getJSON("http://127.0.0.1:8080/robot_ai/v0.1/start_chat", function(result) {
       if(result.result == "OK") {
-        $("#outputDiv").after( "<p>ChatBot is ready!</p>" );
+        $("#chatbotStates").after( "<p>ChatBot is ready!</p>" );
       }
-      else {
-        $("#outputDiv").after( "<p>ChatBot is not open!!!</p>" )
-      }
-    });
+    })
+    .fail(function() {
+      $("#chatbotStates").after( "<p>ChatBot is not open!!!</p>" );
+    })
   });
 
   </script>
@@ -36,7 +36,6 @@
     } else { // 否則就開始辨識
       textBox.value = ''; // 清除最終的辨識訊息
       tempBox.value = ''; // 清除中間的辨識訊息
-      final_transcript = ''; // 最終的辨識訊息變數
       recognition.lang = "cmn-Hant-TW"; // 設定辨識語言
       recognition.start(); // 開始辨識
     }
@@ -66,23 +65,21 @@
       var interim_transcript = ''; // 中間結果
       for (var i = event.resultIndex; i < event.results.length; ++i) { // 對於每一個辨識結果
         if (event.results[i].isFinal) { // 如果是最終結果
-          final_transcript += event.results[i][0].transcript; // 將其加入最終結果中
           sendChatBotText += event.results[i][0].transcript; // 將其加入最終結果中
         } else { // 否則
           interim_transcript += event.results[i][0].transcript; // 將其加入中間結果中
         }
       }
-      if (final_transcript.trim().length > 0) { // 如果有最終辨識文字
-          textBox.value = final_transcript; // 顯示最終辨識文字
-
-          // send data to chatbox, and show text in outputDiv
-          var url = "http://127.0.0.1:8080/robot_ai/v0.1/chat/" + sendChatBotText;
-          $.getJSON(url, function(result) {
-            if(result.replies) {
-              $("#outputDiv").append(result.replies + "<br>");
-            }
-          });
-          sendChatBotText = ''; // clear send to chatbot text
+        // send data to chatbox, and show text in outputDiv
+      if (sendChatBotText.length > 0) {
+        textBox.value = sendChatBotText; // 顯示最終辨識文字
+        var url = "http://127.0.0.1:8080/robot_ai/v0.1/chat/" + sendChatBotText;
+        $.getJSON(url, function(result) {
+          if(result.replies) {
+            $("#outputDiv").append(result.replies + "<br>");
+          }
+        });
+        sendChatBotText = ''; // clear send to chatbot text
       }
       if (interim_transcript.trim().length > 0) // 如果有中間辨識文字
           tempBox.value = interim_transcript; // 顯示中間辨識文字
@@ -94,9 +91,8 @@
   中間結果：<input id="tempBox" type="text" size="60" value=""/><BR/>
   <input id="startStopButton" type="button" value="辨識" onclick="startButton(event)"/><BR/>
   <!-- <button id="chatBotButton">ChatBot</button> -->
-  <div id="outputDiv">
-    <!-- <input id="testButton" type="button" value="test" onclick="testButton()"/> -->
-  </div>
+  <div id="chatbotStates"></div>
+  <div id="outputDiv"/></div>
   <label id="infoBox"></label>
 
 </body>
