@@ -1,99 +1,142 @@
 <html>
 <head><meta charset="utf-8" /></head>
 <body>
-  <script type="text/javascript" src="bower_components/jquery/dist/jquery.js"></script>
-  <script>
-  $(document).ready(function() {
-    // load document ready than check chatbot is ready or not
-    $.getJSON("http://127.0.0.1:8080/robot_ai/v0.1/start_chat", function(result) {
-      if(result.result == "OK") {
-        $("#chatbotStates").after( "<p>ChatBot is ready!</p>" );
-      }
-    })
-    .fail(function() {
-      $("#chatbotStates").after( "<p>ChatBot is not open!!!</p>" );
-    })
-  });
-
-  </script>
-  <script type="text/javascript">
-  var infoBox; // 訊息 label
-  var textBox; // 最終的辨識訊息 text input
-  var tempBox; // 中間的辨識訊息 text input
-  var startStopButton; // 「辨識/停止」按鈕
-  var final_transcript = ''; // 最終的辨識訊息的變數
-  var sendChatBotText = ''; //send to chatbot text
-  var recognizing = false; // 是否辨識中
-
-  function startButton(event) {
-    infoBox = document.getElementById("infoBox"); // 取得訊息控制項 infoBox
-    textBox = document.getElementById("textBox"); // 取得最終的辨識訊息控制項 textBox
-    tempBox = document.getElementById("tempBox"); // 取得中間的辨識訊息控制項 tempBox
-    startStopButton = document.getElementById("startStopButton"); // 取得「辨識/停止」這個按鈕控制項
-
-    if (recognizing) { // 如果正在辨識，則停止。
-      recognition.stop();
-    } else { // 否則就開始辨識
-      textBox.value = ''; // 清除最終的辨識訊息
-      tempBox.value = ''; // 清除中間的辨識訊息
-      recognition.lang = "cmn-Hant-TW"; // 設定辨識語言
-      recognition.start(); // 開始辨識
+<meta charset="utf-8" />
+<script src="http://cdn.robotwebtools.org/EventEmitter2/current/eventemitter2.min.js"></script>
+<script src="../build/roslib.js"></script>
+<script type="text/javascript" src="bower_components/jquery/dist/jquery.js"></script>
+<script>
+$(document).ready(function() {
+  // load document ready than check chatbot is ready or not
+  $.getJSON("http://127.0.0.1:8080/robot_ai/v0.1/start_chat", function(result) {
+    if(result.result == "OK") {
+      $("#chatbotStates").after( "<p>ChatBot is ready!</p>" );
     }
+  })
+  .fail(function() {
+    $("#chatbotStates").after( "<p>ChatBot is not open!!!</p>" );
+  })
+});
+
+</script>
+<script type="text/javascript">
+var infoBox; // 訊息 label
+var textBox; // 最終的辨識訊息 text input
+var tempBox; // 中間的辨識訊息 text input
+var startStopButton; // 「辨識/停止」按鈕
+var final_transcript = ''; // 最終的辨識訊息的變數
+var sendChatBotText = ''; //send to chatbot text
+var recognizing = false; // 是否辨識中
+
+var ros = new ROSLIB.Ros();
+
+// If there is an error on the backend, an 'error' emit will be emitted.
+ros.on('error', function(error) {
+  $("#rosStates").after( "<p>ROS has errors!</p>" );
+  console.log(error);
+});
+
+// Find out exactly when we made a connection.
+ros.on('connection', function() {
+  console.log('Connection made!');
+  $("#rosStates").after( "<p>ROS is ready!</p>" );
+});
+
+ros.on('close', function() {
+  console.log('Connection closed.');
+  $("#rosStates").after( "<p>ROS is not open!</p>" );
+});
+
+// Create a connection to the rosbridge WebSocket server.
+ros.connect('ws://localhost:9090');
+// Publishing a Topic
+// ------------------
+
+// First, we create a Topic object with details of the topic's name and message type.
+var ekhoTTS = new ROSLIB.Topic({
+  ros : ros,
+  name : 'ttsText',
+  messageType : 'std_msgs/String'
+});
+
+
+
+function startButton(event) {
+  infoBox = document.getElementById("infoBox"); // 取得訊息控制項 infoBox
+  textBox = document.getElementById("textBox"); // 取得最終的辨識訊息控制項 textBox
+  tempBox = document.getElementById("tempBox"); // 取得中間的辨識訊息控制項 tempBox
+  startStopButton = document.getElementById("startStopButton"); // 取得「辨識/停止」這個按鈕控制項
+
+  if (recognizing) { // 如果正在辨識，則停止。
+    recognition.stop();
+  } else { // 否則就開始辨識
+    textBox.value = ''; // 清除最終的辨識訊息
+    tempBox.value = ''; // 清除中間的辨識訊息
+    recognition.lang = "cmn-Hant-TW"; // 設定辨識語言
+    recognition.start(); // 開始辨識
   }
+}
 
-  if (!('webkitSpeechRecognition' in window)) {  // 如果找不到 window.webkitSpeechRecognition 這個屬性
-    // 就是不支援語音辨識，要求使用者更新瀏覽器。 
-    infoBox.innerText = "本瀏覽器不支援語音辨識，請更換瀏覽器！(Chrome 25 版以上才支援語音辨識)";
-  } else {
-    var recognition = new webkitSpeechRecognition(); // 建立語音辨識物件 webkitSpeechRecognition
-    recognition.continuous = true; // 設定連續辨識模式
-    recognition.interimResults = true; // 設定輸出中先結果。
+if (!('webkitSpeechRecognition' in window)) {  // 如果找不到 window.webkitSpeechRecognition 這個屬性
+  // 就是不支援語音辨識，要求使用者更新瀏覽器。 
+  infoBox.innerText = "本瀏覽器不支援語音辨識，請更換瀏覽器！(Chrome 25 版以上才支援語音辨識)";
+} else {
+  var recognition = new webkitSpeechRecognition(); // 建立語音辨識物件 webkitSpeechRecognition
+  recognition.continuous = true; // 設定連續辨識模式
+  recognition.interimResults = true; // 設定輸出中先結果。
 
-    recognition.onstart = function() { // 開始辨識
-      recognizing = true; // 設定為辨識中
-      startStopButton.value = "按此停止"; // 辨識中...按鈕改為「按此停止」。  
-      infoBox.innerText = "辨識中...";  // 顯示訊息為「辨識中」...
-    };
+  recognition.onstart = function() { // 開始辨識
+    recognizing = true; // 設定為辨識中
+    startStopButton.value = "按此停止"; // 辨識中...按鈕改為「按此停止」。  
+    infoBox.innerText = "辨識中...";  // 顯示訊息為「辨識中」...
+  };
 
-    recognition.onend = function() { // 辨識完成
-      recognizing = false; // 設定為「非辨識中」
-      startStopButton.value = "開始辨識";  // 辨識完成...按鈕改為「開始辨識」。
-      infoBox.innerText = ""; // 不顯示訊息
-    };
+  recognition.onend = function() { // 辨識完成
+    recognizing = false; // 設定為「非辨識中」
+    startStopButton.value = "開始辨識";  // 辨識完成...按鈕改為「開始辨識」。
+    infoBox.innerText = ""; // 不顯示訊息
+  };
 
-    recognition.onresult = function(event) { // 辨識有任何結果時
-      var interim_transcript = ''; // 中間結果
-      for (var i = event.resultIndex; i < event.results.length; ++i) { // 對於每一個辨識結果
-        if (event.results[i].isFinal) { // 如果是最終結果
-          sendChatBotText += event.results[i][0].transcript; // 將其加入最終結果中
-        } else { // 否則
-          interim_transcript += event.results[i][0].transcript; // 將其加入中間結果中
+  recognition.onresult = function(event) { // 辨識有任何結果時
+    var interim_transcript = ''; // 中間結果
+    for (var i = event.resultIndex; i < event.results.length; ++i) { // 對於每一個辨識結果
+      if (event.results[i].isFinal) { // 如果是最終結果
+        sendChatBotText += event.results[i][0].transcript; // 將其加入最終結果中
+      } else { // 否則
+        interim_transcript += event.results[i][0].transcript; // 將其加入中間結果中
+      }
+    }
+      // send data to chatbox, and show text in outputDiv
+    if (sendChatBotText.length > 0) {
+      textBox.value = sendChatBotText; // 顯示最終辨識文字
+      var url = "http://127.0.0.1:8080/robot_ai/v0.1/chat/" + sendChatBotText;
+      $.getJSON(url, function(result) {
+        if(result.replies) {
+          $("#outputDiv").append(result.replies + "<br>");
+          // publish answer as message
+          var message = new ROSLIB.Message({
+            data : result.replies[0]
+          });
+          // And finally, publish.
+          ekhoTTS.publish(message);
         }
-      }
-        // send data to chatbox, and show text in outputDiv
-      if (sendChatBotText.length > 0) {
-        textBox.value = sendChatBotText; // 顯示最終辨識文字
-        var url = "http://127.0.0.1:8080/robot_ai/v0.1/chat/" + sendChatBotText;
-        $.getJSON(url, function(result) {
-          if(result.replies) {
-            $("#outputDiv").append(result.replies + "<br>");
-          }
-        });
-        sendChatBotText = ''; // clear send to chatbot text
-      }
-      if (interim_transcript.trim().length > 0) // 如果有中間辨識文字
-          tempBox.value = interim_transcript; // 顯示中間辨識文字
-    };
-  }
-  </script>	
-  <BR/>
-  最後結果：<input id="textBox" type="text" size="60" value=""/><BR/>
-  中間結果：<input id="tempBox" type="text" size="60" value=""/><BR/>
-  <input id="startStopButton" type="button" value="辨識" onclick="startButton(event)"/><BR/>
-  <!-- <button id="chatBotButton">ChatBot</button> -->
-  <div id="chatbotStates"></div>
-  <div id="outputDiv"/></div>
-  <label id="infoBox"></label>
+      });
+      sendChatBotText = ''; // clear send to chatbot text
+    }
+    if (interim_transcript.trim().length > 0) // 如果有中間辨識文字
+        tempBox.value = interim_transcript; // 顯示中間辨識文字
+  };
+}
+</script>	
+<BR/>
+最後結果：<input id="textBox" type="text" size="60" value=""/><BR/>
+中間結果：<input id="tempBox" type="text" size="60" value=""/><BR/>
+<input id="startStopButton" type="button" value="辨識" onclick="startButton(event)"/><BR/>
+<!-- <button id="chatBotButton">ChatBot</button> -->
+<div id="chatbotStates"></div>
+<div id="rosStates"></div>
+<div id="outputDiv"/></div>
+<label id="infoBox"></label>
 
 </body>
 </html>
