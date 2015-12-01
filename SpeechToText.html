@@ -25,9 +25,8 @@ var final_transcript = ''; // 最終的辨識訊息的變數
 var sendChatBotText = ''; //send to chatbot text
 var recognizing = false; // 是否辨識中
 
-var speechKey = '36e5bab37e1a419d94f1bd0da8a2bb59';
-var speechUrl = 'https://api.voicerss.org/';
-
+// var speechKey = '36e5bab37e1a419d94f1bd0da8a2bb59';
+var speechUrl = 'http://translate.google.com/translate_tts';
 function startButton(event) {
   infoBox = document.getElementById("infoBox"); // 取得訊息控制項 infoBox
   textBox = document.getElementById("textBox"); // 取得最終的辨識訊息控制項 textBox
@@ -45,7 +44,7 @@ function startButton(event) {
 }
 
 function speak(speakData) {
-    var fullUrl = speechUrl + "/?key=" + speechKey + "&hl=zh-cn&r=-5&f=16khz_16bit_mono&src=" + speakData; 
+    var fullUrl = speechUrl + "?ie=utf-8&tl=zh&q=" + speakData + "&ie=UTF-8&total=1&idx=0&client=t"; 
     $('audio').attr('src', fullUrl);
 };  //end speak function
 
