@@ -61,12 +61,14 @@ if (!('webkitSpeechRecognition' in window)) {  // 如果找不到 window.webkitS
   recognition.onstart = function() { // 開始辨識
     recognizing = true; // 設定為辨識中
     startStopButton.value = "按此停止"; // 辨識中...按鈕改為「按此停止」。  
+    $("#startStopButton").css('color','green'); // change button color to green on start
     infoBox.innerText = "辨識中...";  // 顯示訊息為「辨識中」...
   };
 
   recognition.onend = function() { // 辨識完成
     recognizing = false; // 設定為「非辨識中」
     startStopButton.value = "開始辨識";  // 辨識完成...按鈕改為「開始辨識」。
+    $("#startStopButton").css('color','black'); // change button color to black on end
     infoBox.innerText = ""; // 不顯示訊息
   };
 
