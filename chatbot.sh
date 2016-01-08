@@ -10,5 +10,6 @@ function openSTT {
 }
 
 openChatbot &
-openSTT
+openSTT &
+xdg-open http://localhost:8000
 

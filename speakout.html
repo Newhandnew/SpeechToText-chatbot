@@ -1,0 +1,103 @@
+<html>
+<head><meta charset="utf-8" /></head>
+<body>
+<script type="text/javascript" src="bower_components/jquery/dist/jquery.js"></script>
+<script>
+$(document).ready(function() {
+  // load document ready than check chatbot is ready or not
+  if(navigator.onLine) {
+    $("#chatbotStates").after( "<p>press identify to start</p>" );
+  }
+  else {
+    $("#chatbotStates").after( "<p>Need to connet to Internet!!!</p>" );
+  }
+});
+
+</script>
+<script type="text/javascript">
+var infoBox; // 訊息 label
+var textBox; // 最終的辨識訊息 text input
+var tempBox; // 中間的辨識訊息 text input
+var startStopButton; // 「辨識/停止」按鈕
+var final_transcript = ''; // 最終的辨識訊息的變數
+var sendChatBotText = ''; //send to chatbot text
+var recognizing = false; // 是否辨識中
+
+var speechKey = '36e5bab37e1a419d94f1bd0da8a2bb59';
+var speechUrl = 'https://api.voicerss.org/';
+
+function startButton(event) {
+  infoBox = document.getElementById("infoBox"); // 取得訊息控制項 infoBox
+  textBox = document.getElementById("textBox"); // 取得最終的辨識訊息控制項 textBox
+  tempBox = document.getElementById("tempBox"); // 取得中間的辨識訊息控制項 tempBox
+  startStopButton = document.getElementById("startStopButton"); // 取得「辨識/停止」這個按鈕控制項
+
+  if (recognizing) { // 如果正在辨識，則停止。
+    recognition.stop();
+  } else { // 否則就開始辨識
+    textBox.value = ''; // 清除最終的辨識訊息
+    tempBox.value = ''; // 清除中間的辨識訊息
+    recognition.lang = "cmn-Hant-TW"; // 設定辨識語言
+    recognition.start(); // 開始辨識
+  }
+}
+
+function speak(speakData) {
+    var fullUrl = speechUrl + "/?key=" + speechKey + "&hl=zh-cn&r=-5&f=16khz_16bit_mono&src=" + speakData; 
+    $('audio').attr('src', fullUrl);
+};  //end speak function
+
+
+if (!('webkitSpeechRecognition' in window)) {  // 如果找不到 window.webkitSpeechRecognition 這個屬性
+  // 就是不支援語音辨識，要求使用者更新瀏覽器。 
+  infoBox.innerText = "本瀏覽器不支援語音辨識，請更換瀏覽器！(Chrome 25 版以上才支援語音辨識)";
+} else {
+  var recognition = new webkitSpeechRecognition(); // 建立語音辨識物件 webkitSpeechRecognition
+  recognition.continuous = true; // 設定連續辨識模式
+  recognition.interimResults = true; // 設定輸出中先結果。
+
+  recognition.onstart = function() { // 開始辨識
+    recognizing = true; // 設定為辨識中
+    startStopButton.value = "按此停止"; // 辨識中...按鈕改為「按此停止」。  
+    $("#startStopButton").css('color','green'); // change button color to green on start
+    infoBox.innerText = "辨識中...";  // 顯示訊息為「辨識中」...
+  };
+
+  recognition.onend = function() { // 辨識完成
+    recognizing = false; // 設定為「非辨識中」
+    startStopButton.value = "開始辨識";  // 辨識完成...按鈕改為「開始辨識」。
+    $("#startStopButton").css('color','black'); // change button color to black on end
+    infoBox.innerText = ""; // 不顯示訊息
+  };
+
+  recognition.onresult = function(event) { // 辨識有任何結果時
+    var interim_transcript = ''; // 中間結果
+    for (var i = event.resultIndex; i < event.results.length; ++i) { // 對於每一個辨識結果
+      if (event.results[i].isFinal) { // 如果是最終結果
+        sendChatBotText += event.results[i][0].transcript; // 將其加入最終結果中
+      } else { // 否則
+        interim_transcript += event.results[i][0].transcript; // 將其加入中間結果中
+      }
+    }
+      // send data to chatbox, and show text in outputDiv
+    if (sendChatBotText.length > 0) {
+      textBox.value = sendChatBotText; // 顯示最終辨識文字
+      speak(sendChatBotText);
+      sendChatBotText = ''; // clear send to chatbot text
+    }
+    if (interim_transcript.trim().length > 0) // 如果有中間辨識文字
+        tempBox.value = interim_transcript; // 顯示中間辨識文字
+  };
+}
+</script>	
+<BR/>
+最後結果：<input id="textBox" type="text" size="60" value=""/><BR/>
+中間結果：<input id="tempBox" type="text" size="60" value=""/><BR/>
+<input id="startStopButton" type="button" value="辨識" onclick="startButton(event)"/><BR/>
+<!-- <button id="chatBotButton">ChatBot</button> -->
+<div id="chatbotStates"></div>
+<div id="outputDiv"/></div>
+<label id="infoBox"></label>
+<audio src="" autoplay>Your browser does not support the <code>audio</code> element.</audio>
+</body>
+</html>
